@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stockman Lawnscape — Lead Matcher</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-primary: #0a0a0b;
+  --bg-secondary: #111113;
+  --bg-tertiary: #1a1a1d;
+  --bg-elevated: #222225;
+  --border-subtle: #2a2a2e;
+  --border-medium: #3a3a40;
+  --text-primary: #e8e8ea;
+  --text-secondary: #9a9aa0;
+  --text-muted: #5a5a62;
+  --accent-cyan: #00d4ff;
+  --accent-cyan-dim: #00a8cc;
+  --accent-green: #00ff88;
+  --accent-green-dim: #00cc6a;
+  --accent-yellow: #ffcc00;
+  --accent-orange: #ff8844;
+  --accent-red: #ff4466;
+  --accent-purple: #a855f7;
+  --gradient-glow: linear-gradient(135deg, #00d4ff22 0%, #00ff8822 100%);
+
+  --font-ui: 'Space Grotesk', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+html { font-size: 14px; }
+
+body {
+  font-family: var(--font-ui);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,0.015) 39px, rgba(255,255,255,0.015) 40px),
+    repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.015) 39px, rgba(255,255,255,0.015) 40px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-tertiary); }
+::-webkit-scrollbar-thumb { background: var(--border-medium); }
+
+/* ── CONTAINER ── */
+.container {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 40px 24px 60px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── HEADER ── */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 36px;
+}
+
+.logo-mark {
+  width: 44px;
+  height: 44px;
+  background: var(--gradient-glow);
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.logo-mark svg { width: 22px; height: 22px; color: var(--accent-cyan); }
+
+.header-text h1 {
+  font-family: var(--font-ui);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+.header-text p {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ── PANELS ── */
+.panel {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  margin-bottom: 20px;
+}
+
+.panel-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.panel-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.panel-title::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: var(--accent-cyan);
+  flex-shrink: 0;
+}
+
+.panel-body { padding: 20px; }
+
+/* ── UPLOAD ZONES ── */
+.upload-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.upload-zone {
+  background: var(--bg-secondary);
+  border: 2px dashed var(--border-medium);
+  padding: 32px 24px;
+  text-align: center;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+}
+.upload-zone:hover { border-color: var(--accent-cyan); }
+.upload-zone.dragover { border-color: var(--accent-green); background: rgba(0,255,136,0.03); }
+.upload-zone.loaded { border-style: solid; border-color: var(--accent-green); }
+
+.upload-zone input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.upload-icon {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 12px;
+  border: 1px solid var(--border-medium);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.upload-zone.loaded .upload-icon { border-color: var(--accent-green); }
+.upload-icon svg { width: 18px; height: 18px; color: var(--text-muted); }
+.upload-zone.loaded .upload-icon svg { color: var(--accent-green); }
+
+.upload-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+.upload-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+.upload-filename {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent-green);
+  font-weight: 500;
+  margin-top: 8px;
+}
+
+/* ── PROCESSING ── */
+.processing-bar {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  margin-bottom: 20px;
+}
+.processing-bar.visible { display: flex; }
+
+.spinner {
+  width: 18px; height: 18px;
+  border: 2px solid var(--border-medium);
+  border-top-color: var(--accent-cyan);
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.processing-bar span {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* ── RESULTS ── */
+#results { display: none; }
+#results.visible { display: block; animation: fadeIn 0.3s ease; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── STATS ROW ── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  padding: 18px 20px;
+  animation: fadeIn 0.3s ease backwards;
+}
+.stat-card:nth-child(1) { animation-delay: 0.05s; }
+.stat-card:nth-child(2) { animation-delay: 0.1s; }
+.stat-card:nth-child(3) { animation-delay: 0.15s; }
+.stat-card:nth-child(4) { animation-delay: 0.2s; }
+.stat-card:nth-child(5) { animation-delay: 0.25s; }
+
+.stat-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+.stat-value {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+}
+.stat-value.cyan { color: var(--accent-cyan); }
+.stat-value.green { color: var(--accent-green); }
+.stat-value.yellow { color: var(--accent-yellow); }
+.stat-value.orange { color: var(--accent-orange); }
+.stat-value.red { color: var(--accent-red); }
+
+.stat-sub {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+/* ── TWO-COL PANELS ── */
+.panel-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+/* Source bars */
+.source-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.source-row:last-child { margin-bottom: 0; }
+
+.source-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  min-width: 110px;
+  flex-shrink: 0;
+}
+.source-bar-track {
+  flex: 1;
+  height: 22px;
+  background: var(--bg-tertiary);
+  overflow: hidden;
+  position: relative;
+}
+.source-bar-fill {
+  height: 100%;
+  transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  display: flex;
+  align-items: center;
+  padding-left: 8px;
+}
+.source-bar-fill span {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--bg-primary);
+}
+.bar-paid { background: var(--accent-orange); }
+.bar-organic { background: var(--accent-green); }
+.bar-direct { background: var(--accent-cyan); }
+.bar-ai { background: var(--accent-purple); }
+.bar-other { background: var(--text-muted); }
+
+.source-count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 28px;
+  text-align: right;
+}
+
+/* Status grid */
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 10px;
+}
+.status-item {
+  text-align: center;
+  padding: 14px 8px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+}
+.status-count {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.status-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+.status-won .status-count, .status-won .status-label { color: var(--accent-green); }
+.status-open .status-count, .status-open .status-label { color: var(--accent-cyan); }
+.status-contacted .status-count, .status-contacted .status-label { color: var(--accent-yellow); }
+.status-lost .status-count, .status-lost .status-label { color: var(--accent-red); }
+.status-estimate .status-count, .status-estimate .status-label { color: var(--accent-purple); }
+
+/* ── TABLE ── */
+.table-toolbar {
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
+}
+.table-toolbar .panel-title { margin-right: auto; }
+
+.filter-group { display: flex; gap: 4px; flex-wrap: wrap; }
+
+.filter-btn {
+  padding: 5px 12px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 1px solid var(--border-medium);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.filter-btn:hover { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+.filter-btn.active { background: var(--accent-cyan); color: var(--bg-primary); border-color: var(--accent-cyan); }
+
+.search-input {
+  padding: 6px 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  border: 1px solid var(--border-medium);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  width: 200px;
+  transition: all 0.15s;
+}
+.search-input:focus { outline: none; border-color: var(--accent-cyan); }
+.search-input::placeholder { color: var(--text-muted); }
+
+.export-btn {
+  padding: 6px 16px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border: none;
+  background: var(--accent-cyan);
+  color: var(--bg-primary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.export-btn:hover { background: var(--accent-cyan-dim); transform: translateY(-1px); }
+
+.table-wrap { overflow-x: auto; }
+
+table { width: 100%; border-collapse: collapse; }
+
+thead th {
+  padding: 10px 14px;
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+thead th:hover { color: var(--accent-cyan); }
+thead th .sort-arrow {
+  display: inline-block;
+  margin-left: 4px;
+  opacity: 0.3;
+  font-size: 9px;
+}
+thead th.sorted .sort-arrow { opacity: 1; color: var(--accent-cyan); }
+
+tbody tr { transition: background 0.1s; }
+tbody tr:hover { background: var(--bg-elevated); }
+tbody tr:nth-child(even) { background: rgba(255,255,255,0.015); }
+tbody tr:nth-child(even):hover { background: var(--bg-elevated); }
+
+td {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  vertical-align: middle;
+  font-size: 12px;
+}
+
+.td-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+.td-phone {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  border: 1px solid;
+}
+.badge-won { background: rgba(0,255,136,0.1); color: var(--accent-green); border-color: rgba(0,255,136,0.25); }
+.badge-open { background: rgba(0,212,255,0.1); color: var(--accent-cyan); border-color: rgba(0,212,255,0.25); }
+.badge-contacted { background: rgba(255,204,0,0.1); color: var(--accent-yellow); border-color: rgba(255,204,0,0.25); }
+.badge-lost { background: rgba(255,68,102,0.1); color: var(--accent-red); border-color: rgba(255,68,102,0.25); }
+.badge-estimate { background: rgba(168,85,247,0.1); color: var(--accent-purple); border-color: rgba(168,85,247,0.25); }
+
+.source-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  white-space: nowrap;
+  border: 1px solid;
+}
+.source-tag.src-paid { background: rgba(255,136,68,0.08); color: var(--accent-orange); border-color: rgba(255,136,68,0.2); }
+.source-tag.src-organic { background: rgba(0,255,136,0.08); color: var(--accent-green); border-color: rgba(0,255,136,0.2); }
+.source-tag.src-direct { background: rgba(0,212,255,0.08); color: var(--accent-cyan); border-color: rgba(0,212,255,0.2); }
+.source-tag.src-ai { background: rgba(168,85,247,0.08); color: var(--accent-purple); border-color: rgba(168,85,247,0.2); }
+.source-tag.src-other { background: rgba(90,90,98,0.08); color: var(--text-secondary); border-color: rgba(90,90,98,0.2); }
+
+.source-mismatch::after {
+  content: '!';
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  margin-left: 5px;
+  background: var(--accent-red);
+  color: var(--bg-primary);
+  width: 13px;
+  height: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.td-money {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  text-align: right;
+  white-space: nowrap;
+  color: var(--text-muted);
+}
+.td-money.has-value { color: var(--accent-green); }
+.td-pct {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+/* ── COLLAPSIBLE ── */
+.collapsible {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  margin-bottom: 20px;
+}
+
+.collapsible-trigger {
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: var(--font-ui);
+  transition: background 0.15s;
+  color: var(--text-primary);
+}
+.collapsible-trigger:hover { background: var(--bg-tertiary); }
+
+.collapsible-trigger .chevron {
+  width: 14px; height: 14px;
+  transition: transform 0.2s;
+  color: var(--text-muted);
+}
+.collapsible.open .collapsible-trigger .chevron { transform: rotate(90deg); }
+.collapsible-trigger .panel-title { flex: 1; }
+.collapsible-trigger .count-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 10px;
+  background: rgba(255,204,0,0.1);
+  color: var(--accent-yellow);
+  border: 1px solid rgba(255,204,0,0.25);
+}
+
+.collapsible-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.collapsible.open .collapsible-body { max-height: 3000px; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 1024px) {
+  .upload-grid { grid-template-columns: 1fr; }
+  .panel-row { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  .container { padding: 20px 16px 40px; }
+  .stats-row { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+  .table-toolbar { flex-direction: column; align-items: flex-start; }
+  .search-input { width: 100%; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+    </div>
+    <div class="header-text">
+      <h1>Stockman Lawnscape — Lead Matcher</h1>
+      <p>Cross-reference agency lead sheet against client opportunity tracker</p>
+    </div>
+  </div>
+
+  <!-- UPLOAD SECTION -->
+  <div id="upload-section">
+    <div class="upload-grid">
+      <div class="upload-zone" id="zone-agency">
+        <input type="file" accept=".csv,.xlsx,.xls" id="file-agency">
+        <div class="upload-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <div class="upload-label">Agency Lead Sheet</div>
+        <div class="upload-hint">stockman-lawnscape-lead-sheet.csv</div>
+        <div class="upload-filename" id="fname-agency"></div>
+      </div>
+
+      <div class="upload-zone" id="zone-client">
+        <input type="file" accept=".csv,.xlsx,.xls" id="file-client">
+        <div class="upload-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <div class="upload-label">Client Opportunity Tracker</div>
+        <div class="upload-hint">lead-opportunity-tracker.csv</div>
+        <div class="upload-filename" id="fname-client"></div>
+      </div>
+    </div>
+
+    <div class="processing-bar" id="processing">
+      <div class="spinner"></div>
+      <span>Normalizing phone numbers and matching leads...</span>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results">
+    <!-- Stats -->
+    <div class="stats-row" id="stats-grid"></div>
+
+    <!-- Source + Status -->
+    <div class="panel-row">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">By Agency Source</div>
+        </div>
+        <div class="panel-body" id="source-breakdown"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">By Client Status</div>
+        </div>
+        <div class="panel-body" id="status-breakdown"></div>
+      </div>
+    </div>
+
+    <!-- Matches table -->
+    <div class="panel" style="margin-bottom:20px">
+      <div class="table-toolbar">
+        <div class="panel-title">Matched Leads</div>
+        <input type="text" class="search-input" placeholder="Search name or email..." id="table-search">
+        <div class="filter-group" id="filter-btns"></div>
+        <button class="export-btn" onclick="exportCSV()">Export CSV</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead id="table-head"></thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Unmatched -->
+    <div class="collapsible" id="unmatched-section">
+      <button class="collapsible-trigger" onclick="this.closest('.collapsible').classList.toggle('open')">
+        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        <div class="panel-title">Unmatched Client Leads</div>
+        <span class="count-badge" id="unmatched-count">0</span>
+      </button>
+      <div class="collapsible-body">
+        <div class="table-wrap">
+          <table>
+            <thead id="unmatched-head"></thead>
+            <tbody id="unmatched-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──
+let agencyData = null;
+let clientData = null;
+let matchResults = null;
+let currentSort = { col: null, asc: true };
+let activeFilter = 'All';
+
+// ── CSV PARSER ──
+function parseCSV(text) {
+  const rows = [];
+  let current = '';
+  let inQuotes = false;
+  let row = [];
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    const next = text[i + 1];
+
+    if (inQuotes) {
+      if (ch === '"' && next === '"') { current += '"'; i++; }
+      else if (ch === '"') { inQuotes = false; }
+      else { current += ch; }
+    } else {
+      if (ch === '"') { inQuotes = true; }
+      else if (ch === ',') { row.push(current.trim()); current = ''; }
+      else if (ch === '\n' || (ch === '\r' && next === '\n')) {
+        row.push(current.trim()); current = '';
+        if (row.some(c => c !== '')) rows.push(row);
+        row = [];
+        if (ch === '\r') i++;
+      } else { current += ch; }
+    }
+  }
+  row.push(current.trim());
+  if (row.some(c => c !== '')) rows.push(row);
+  return rows;
+}
+
+// ── PHONE NORMALIZER ──
+function normalizePhone(phone) {
+  if (!phone) return null;
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length === 11 && digits[0] === '1') return digits.slice(1);
+  if (digits.length === 10) return digits;
+  return null;
+}
+
+function formatPhone(digits) {
+  if (!digits || digits.length !== 10) return digits || '—';
+  return `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
+}
+
+// ── PARSE AGENCY SHEET ──
+function parseAgency(rows) {
+  let consolIdx = -1;
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i][0] === 'Name' && rows[i].length > 1 && rows[i][1] === 'Phone') { consolIdx = i; break; }
+  }
+
+  const leads = [];
+  if (consolIdx >= 0) {
+    for (let i = consolIdx + 1; i < rows.length; i++) {
+      const r = rows[i];
+      if (!r[0]) continue;
+      leads.push({
+        name: r[0], phone: r[1] || '', email: r[2] || '',
+        sourceAgency: r[3] || '', oppValueAgency: r[4] || '',
+        weightedAgency: r[5] || '', closeProbAgency: r[6] || '',
+      });
+    }
+  }
+
+  let formStart = -1, callStart = -1;
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i][0] === 'Form Submissions') formStart = i + 2;
+    if (rows[i][0] === 'Phone Calls') callStart = i + 2;
+  }
+
+  const formMap = {};
+  if (formStart > 0) {
+    const end = callStart > 0 ? callStart - 2 : consolIdx > 0 ? consolIdx : rows.length;
+    for (let i = formStart; i < end; i++) {
+      const r = rows[i];
+      if (!r[0] || !r[0].match(/\d/)) continue;
+      const norm = normalizePhone(r[4]);
+      if (norm) formMap[norm] = { date: r[0], name: `${r[1] || ''} ${r[2] || ''}`.trim(), type: 'Form' };
+    }
+  }
+
+  const callMap = {};
+  if (callStart > 0) {
+    for (let i = callStart; i < rows.length; i++) {
+      const r = rows[i];
+      if (r[0] === 'Closed Total Sales Value' || r[0] === 'Name') break;
+      if (!r[0] || !r[0].match(/\d/)) continue;
+      const norm = normalizePhone(r[2]);
+      if (norm) callMap[norm] = { date: r[0], name: r[1] || '', type: 'Phone Call' };
+    }
+  }
+
+  return { leads, formMap, callMap };
+}
+
+// ── PARSE CLIENT SHEET ──
+function parseClient(rows) {
+  let headerIdx = -1;
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i][0] === 'Lead ID') { headerIdx = i; break; }
+  }
+  if (headerIdx < 0) return [];
+
+  const leads = [];
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r[0] || !r[0].startsWith('LEAD')) continue;
+    leads.push({
+      leadId: r[0], date: r[1] || '', name: r[2] || '', phone: r[3] || '',
+      email: r[4] || '', city: r[5] || '', serviceLine: r[6] || '',
+      sourceClient: r[7] || '', salesperson: r[8] || '', leadType: r[9] || '',
+      status: r[11] || '', oppValue: r[13] || '', weighted: r[14] || '',
+      closeProb: r[15] || '', jobNotes: r[17] || '',
+    });
+  }
+  return leads;
+}
+
+// ── MATCHING ──
+function matchLeads(agency, clients) {
+  const clientByPhone = {};
+  clients.forEach(c => {
+    const norm = normalizePhone(c.phone);
+    if (norm && !clientByPhone[norm]) clientByPhone[norm] = c;
+  });
+
+  const matches = [];
+  const matchedClientPhones = new Set();
+
+  agency.leads.forEach(a => {
+    const norm = normalizePhone(a.phone);
+    if (norm && clientByPhone[norm]) {
+      const c = clientByPhone[norm];
+      matches.push({
+        name: a.name, phone: norm, email: a.email || c.email,
+        sourceAgency: a.sourceAgency, sourceClient: c.sourceClient,
+        status: c.status, serviceLine: c.serviceLine, leadType: c.leadType,
+        city: c.city, salesperson: c.salesperson,
+        oppValue: c.oppValue || a.oppValueAgency,
+        weighted: c.weighted || a.weightedAgency,
+        closeProb: c.closeProb || a.closeProbAgency,
+        leadId: c.leadId, date: c.date,
+        sourceMatch: normalizeSource(a.sourceAgency) === normalizeSource(c.sourceClient),
+      });
+      matchedClientPhones.add(norm);
+    }
+  });
+
+  const unmatched = clients.filter(c => {
+    const norm = normalizePhone(c.phone);
+    return !norm || !matchedClientPhones.has(norm);
+  });
+
+  return { matches, unmatched };
+}
+
+function normalizeSource(src) {
+  if (!src) return '';
+  const s = src.toLowerCase();
+  if (s.includes('paid') || s.includes('adword')) return 'paid';
+  if (s.includes('organic')) return 'organic';
+  if (s.includes('direct')) return 'direct';
+  if (s.includes('ai') || s.includes('referral')) return 'ai';
+  if (s.includes('repeat')) return 'repeat';
+  return 'other';
+}
+
+function parseMoney(val) {
+  if (!val || val === 'No Bid') return 0;
+  return parseFloat(String(val).replace(/[$,]/g, '')) || 0;
+}
+
+function fmtMoney(val) {
+  if (!val || val <= 0) return '—';
+  return '$' + val.toLocaleString('en-US', { maximumFractionDigits: 0 });
+}
+
+// ── UPLOAD HANDLERS ──
+const zones = { agency: document.getElementById('zone-agency'), client: document.getElementById('zone-client') };
+const inputs = { agency: document.getElementById('file-agency'), client: document.getElementById('file-client') };
+
+['agency', 'client'].forEach(key => {
+  const zone = zones[key];
+  const input = inputs[key];
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) handleFile(key, e.dataTransfer.files[0]);
+  });
+  input.addEventListener('change', e => {
+    if (e.target.files.length) handleFile(key, e.target.files[0]);
+  });
+});
+
+function handleFile(key, file) {
+  zones[key].classList.add('loaded');
+  document.getElementById(`fname-${key}`).textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const rows = parseCSV(e.target.result);
+    if (key === 'agency') agencyData = parseAgency(rows);
+    else clientData = parseClient(rows);
+    tryMatch();
+  };
+  reader.readAsText(file);
+}
+
+function tryMatch() {
+  if (!agencyData || !clientData) return;
+  const proc = document.getElementById('processing');
+  proc.classList.add('visible');
+  setTimeout(() => {
+    matchResults = matchLeads(agencyData, clientData);
+    proc.classList.remove('visible');
+    renderResults();
+  }, 350);
+}
+
+// ── RENDER ──
+function renderResults() {
+  document.getElementById('results').classList.add('visible');
+  renderStats();
+  renderSourceBreakdown();
+  renderStatusBreakdown();
+  renderTable();
+  renderUnmatched();
+}
+
+function renderStats() {
+  const m = matchResults.matches;
+  const totalOpp = m.reduce((s, x) => s + parseMoney(x.oppValue), 0);
+  const wonValue = m.filter(x => x.status === 'Won').reduce((s, x) => s + parseMoney(x.oppValue), 0);
+  const wonCount = m.filter(x => x.status === 'Won').length;
+  const pipelineValue = m.filter(x => x.status !== 'Won' && x.status !== 'Lost').reduce((s, x) => s + parseMoney(x.oppValue), 0);
+  const disagreeCount = m.filter(x => !x.sourceMatch).length;
+
+  document.getElementById('stats-grid').innerHTML = `
+    <div class="stat-card"><div class="stat-label">Total Matches</div><div class="stat-value cyan">${m.length}</div><div class="stat-sub">${agencyData.leads.length} agency / ${clientData.length} client</div></div>
+    <div class="stat-card"><div class="stat-label">Closed Won</div><div class="stat-value green">${wonCount}</div><div class="stat-sub">${fmtMoney(wonValue)} closed value</div></div>
+    <div class="stat-card"><div class="stat-label">Pipeline Value</div><div class="stat-value yellow">${fmtMoney(pipelineValue)}</div><div class="stat-sub">open + contacted + estimate</div></div>
+    <div class="stat-card"><div class="stat-label">Total Opportunity</div><div class="stat-value cyan">${fmtMoney(totalOpp)}</div><div class="stat-sub">all matched leads w/ values</div></div>
+    <div class="stat-card"><div class="stat-label">Source Conflicts</div><div class="stat-value red">${disagreeCount}</div><div class="stat-sub">${Math.round(disagreeCount / m.length * 100)}% disagree on attribution</div></div>
+  `;
+}
+
+function renderSourceBreakdown() {
+  const m = matchResults.matches;
+  const sources = {};
+  m.forEach(x => { const s = x.sourceAgency || 'Unknown'; sources[s] = (sources[s] || 0) + 1; });
+  const sorted = Object.entries(sources).sort((a, b) => b[1] - a[1]);
+  const max = sorted[0]?.[1] || 1;
+
+  document.getElementById('source-breakdown').innerHTML = sorted.map(([src, count]) => {
+    const pct = (count / max * 100).toFixed(0);
+    const barClass = normalizeSource(src) === 'paid' ? 'bar-paid'
+      : normalizeSource(src) === 'organic' ? 'bar-organic'
+      : normalizeSource(src) === 'direct' ? 'bar-direct'
+      : normalizeSource(src) === 'ai' ? 'bar-ai' : 'bar-other';
+    return `<div class="source-row"><div class="source-label">${src}</div><div class="source-bar-track"><div class="source-bar-fill ${barClass}" style="width:${pct}%"><span>${count}</span></div></div><div class="source-count">${count}</div></div>`;
+  }).join('');
+}
+
+function renderStatusBreakdown() {
+  const m = matchResults.matches;
+  const statuses = { Won: 0, Open: 0, Contacted: 0, Lost: 0, 'Estimate Sent': 0 };
+  m.forEach(x => { const s = x.status || 'Open'; statuses[s] = (statuses[s] || 0) + 1; });
+
+  document.getElementById('status-breakdown').innerHTML = `<div class="status-grid">
+    ${Object.entries(statuses).map(([s, c]) => {
+      const cls = s === 'Won' ? 'status-won' : s === 'Open' ? 'status-open'
+        : s === 'Contacted' ? 'status-contacted' : s === 'Lost' ? 'status-lost' : 'status-estimate';
+      return `<div class="status-item ${cls}"><div class="status-count">${c}</div><div class="status-label">${s}</div></div>`;
+    }).join('')}
+  </div>`;
+}
+
+function renderSourceDetail() {
+  const m = matchResults.matches;
+  const total = m.length;
+
+  // Group by source with stats
+  const sourceStats = {};
+  m.forEach(x => {
+    const s = x.sourceAgency || 'Unknown';
+    if (!sourceStats[s]) sourceStats[s] = { count: 0, won: 0, wonValue: 0, pipeline: 0, lost: 0 };
+    sourceStats[s].count++;
+    if (x.status === 'Won') { sourceStats[s].won++; sourceStats[s].wonValue += parseMoney(x.oppValue); }
+    if (x.status === 'Lost') sourceStats[s].lost++;
+    if (['Open','Contacted','Estimate Sent'].includes(x.status)) sourceStats[s].pipeline += parseMoney(x.oppValue);
+  });
+
+  const sorted = Object.entries(sourceStats).sort((a, b) => b[1].count - a[1].count);
+
+  document.getElementById('source-detail').innerHTML = sorted.map(([src, stats]) => {
+    const pct = (stats.count / total * 100).toFixed(0);
+    const barClass = normalizeSource(src) === 'paid' ? 'bar-paid'
+      : normalizeSource(src) === 'organic' ? 'bar-organic'
+      : normalizeSource(src) === 'direct' ? 'bar-direct'
+      : normalizeSource(src) === 'ai' ? 'bar-ai' : 'bar-other';
+    return `
+      <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border-subtle)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-weight:600;font-size:13px">${src}</div>
+          <div style="font-family:var(--font-mono);font-size:12px;color:var(--text-secondary)">${stats.count} leads (${pct}%)</div>
+        </div>
+        <div class="source-bar-track" style="margin-bottom:8px">
+          <div class="source-bar-fill ${barClass}" style="width:${pct}%"><span>${stats.count}</span></div>
+        </div>
+        <div style="display:flex;gap:16px;font-family:var(--font-mono);font-size:10px">
+          <span style="color:var(--accent-green)">Won: ${stats.won}${stats.wonValue ? ' (' + fmtMoney(stats.wonValue) + ')' : ''}</span>
+          <span style="color:var(--accent-red)">Lost: ${stats.lost}</span>
+          <span style="color:var(--accent-yellow)">Pipeline: ${fmtMoney(stats.pipeline) !== '—' ? fmtMoney(stats.pipeline) : '$0'}</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── TABLE ──
+const columns = [
+  { key: 'name', label: 'Name', cls: 'td-name' },
+  { key: 'phone', label: 'Phone', fmt: v => formatPhone(v), cls: 'td-phone' },
+  { key: 'sourceAgency', label: 'Our Source', fmt: (v, row) => sourceTag(v, row) },
+  { key: 'sourceClient', label: 'Client Source', fmt: (v, row) => sourceTag(v, row, true) },
+  { key: 'status', label: 'Status', fmt: v => statusBadge(v) },
+  { key: 'serviceLine', label: 'Service' },
+  { key: 'leadType', label: 'Type' },
+  { key: 'oppValue', label: 'Opp. Value', cls: 'td-money', fmt: v => { const n = parseMoney(v); return n ? `<span class="has-value">${fmtMoney(n)}</span>` : '—'; } },
+  { key: 'weighted', label: 'Weighted', cls: 'td-money', fmt: v => { const n = parseMoney(v); return n ? fmtMoney(n) : '—'; } },
+  { key: 'closeProb', label: 'Close %', cls: 'td-pct' },
+];
+
+function sourceTag(val, row, isClient) {
+  const norm = normalizeSource(val);
+  const cls = norm === 'paid' ? 'src-paid' : norm === 'organic' ? 'src-organic'
+    : norm === 'direct' ? 'src-direct' : norm === 'ai' ? 'src-ai' : 'src-other';
+  const mismatch = isClient && !row.sourceMatch ? ' source-mismatch' : '';
+  return `<span class="source-tag ${cls}${mismatch}">${val || '—'}</span>`;
+}
+
+function statusBadge(val) {
+  if (!val) return '—';
+  const cls = val === 'Won' ? 'badge-won' : val === 'Open' ? 'badge-open'
+    : val === 'Contacted' ? 'badge-contacted' : val === 'Lost' ? 'badge-lost' : 'badge-estimate';
+  return `<span class="badge ${cls}">${val}</span>`;
+}
+
+function renderTable() {
+  document.getElementById('table-head').innerHTML = '<tr>' + columns.map(c =>
+    `<th data-col="${c.key}" onclick="sortTable('${c.key}')">${c.label}<span class="sort-arrow">▼</span></th>`
+  ).join('') + '</tr>';
+
+  const filterContainer = document.getElementById('filter-btns');
+  const statuses = ['All', 'Won', 'Open', 'Contacted', 'Lost', 'Estimate Sent', 'Conflicts'];
+  filterContainer.innerHTML = statuses.map(s =>
+    `<button class="filter-btn ${s === 'All' ? 'active' : ''}" onclick="filterTable('${s}')">${s}</button>`
+  ).join('');
+
+  document.getElementById('table-search').addEventListener('input', () => renderTableRows());
+  renderTableRows();
+}
+
+function getFilteredMatches() {
+  let data = [...matchResults.matches];
+  if (activeFilter !== 'All') {
+    if (activeFilter === 'Conflicts') data = data.filter(x => !x.sourceMatch);
+    else data = data.filter(x => x.status === activeFilter);
+  }
+  const q = document.getElementById('table-search').value.toLowerCase();
+  if (q) data = data.filter(x => x.name.toLowerCase().includes(q) || (x.email && x.email.toLowerCase().includes(q)));
+  if (currentSort.col) {
+    data.sort((a, b) => {
+      let va = a[currentSort.col] || '', vb = b[currentSort.col] || '';
+      if (['oppValue', 'weighted'].includes(currentSort.col)) { va = parseMoney(va); vb = parseMoney(vb); }
+      if (typeof va === 'number') return currentSort.asc ? va - vb : vb - va;
+      return currentSort.asc ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
+    });
+  }
+  return data;
+}
+
+function renderTableRows() {
+  const data = getFilteredMatches();
+  document.getElementById('table-body').innerHTML = data.map(row =>
+    '<tr>' + columns.map(c => {
+      const val = row[c.key];
+      const rendered = c.fmt ? c.fmt(val, row) : (val || '—');
+      return `<td class="${c.cls || ''}">${rendered}</td>`;
+    }).join('') + '</tr>'
+  ).join('');
+}
+
+function sortTable(col) {
+  if (currentSort.col === col) currentSort.asc = !currentSort.asc;
+  else currentSort = { col, asc: true };
+  document.querySelectorAll('#table-head th').forEach(th => {
+    th.classList.toggle('sorted', th.dataset.col === col);
+    if (th.dataset.col === col) th.querySelector('.sort-arrow').textContent = currentSort.asc ? '▲' : '▼';
+  });
+  renderTableRows();
+}
+
+function filterTable(status) {
+  activeFilter = status;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.textContent === status));
+  renderTableRows();
+}
+
+function renderUnmatched() {
+  const um = matchResults.unmatched;
+  document.getElementById('unmatched-count').textContent = um.length;
+
+  document.getElementById('unmatched-head').innerHTML = '<tr><th>Lead ID</th><th>Name</th><th>Phone</th><th>Status</th><th>Service</th><th>Lead Source</th><th>Type</th><th>Opp. Value</th></tr>';
+
+  document.getElementById('unmatched-body').innerHTML = um.map(r => `
+    <tr>
+      <td style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted)">${r.leadId}</td>
+      <td class="td-name">${r.name}</td>
+      <td class="td-phone">${r.phone || '—'}</td>
+      <td>${statusBadge(r.status)}</td>
+      <td>${r.serviceLine || '—'}</td>
+      <td>${r.sourceClient || '—'}</td>
+      <td>${r.leadType || '—'}</td>
+      <td class="td-money">${parseMoney(r.oppValue) ? `<span class="has-value">${fmtMoney(parseMoney(r.oppValue))}</span>` : '—'}</td>
+    </tr>
+  `).join('');
+}
+
+// ── EXPORT ──
+function exportCSV() {
+  const data = getFilteredMatches();
+  const headers = ['Name','Phone','Email','Agency Source','Client Source','Source Match','Status','Service Line','Lead Type','City','Salesperson','Opportunity Value','Weighted Forecast','Close Probability','Lead ID','Date'];
+  const rows = data.map(r => [
+    r.name, formatPhone(r.phone), r.email, r.sourceAgency, r.sourceClient,
+    r.sourceMatch ? 'Yes' : 'No', r.status, r.serviceLine, r.leadType,
+    r.city, r.salesperson, parseMoney(r.oppValue) || '', parseMoney(r.weighted) || '',
+    r.closeProb, r.leadId, r.date
+  ]);
+  const csv = [headers, ...rows].map(r => r.map(c => `"${String(c || '').replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `stockman-lead-matches-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
