@@ -806,7 +806,7 @@ function parseAgency(rows) {
       if (r[0] === 'Closed Total Sales Value' || r[0] === 'Name') break;
       if (!r[0] || !r[0].match(/\d/)) continue;
       const norm = normalizePhone(r[2]);
-      if (norm) callMap[norm] = { date: r[0], name: r[1] || '', type: 'Phone Call' };
+      if (norm) callMap[norm] = { date: r[0], name: r[1] || '', type: 'Phone Call', source: r[3] || '', salesValue: r[8] || '' };
     }
   }
 
@@ -838,6 +838,38 @@ function parseClient(rows) {
 
 // ── MATCHING ──
 function matchLeads(agency, clients) {
+  // Build unified agency phone lookup from ALL sections (consolidated + forms + calls)
+  const agencyByPhone = {};
+
+  // Consolidated section first (richest data)
+  agency.leads.forEach(a => {
+    const norm = normalizePhone(a.phone);
+    if (norm) agencyByPhone[norm] = a;
+  });
+
+  // Forms — add any phones not already in consolidated
+  Object.entries(agency.formMap).forEach(([norm, f]) => {
+    if (!agencyByPhone[norm]) {
+      agencyByPhone[norm] = {
+        name: f.name, phone: norm, email: '',
+        sourceAgency: '', oppValueAgency: '', weightedAgency: '', closeProbAgency: '',
+        contactType: 'Form',
+      };
+    }
+  });
+
+  // Calls — add any phones not already in consolidated or forms
+  Object.entries(agency.callMap).forEach(([norm, c]) => {
+    if (!agencyByPhone[norm]) {
+      agencyByPhone[norm] = {
+        name: c.name, phone: norm, email: '',
+        sourceAgency: c.source || '', oppValueAgency: c.salesValue || '',
+        weightedAgency: '', closeProbAgency: '',
+        contactType: 'Phone Call',
+      };
+    }
+  });
+
   const clientByPhone = {};
   clients.forEach(c => {
     const norm = normalizePhone(c.phone);
@@ -847,12 +879,11 @@ function matchLeads(agency, clients) {
   const matches = [];
   const matchedClientPhones = new Set();
 
-  agency.leads.forEach(a => {
-    const norm = normalizePhone(a.phone);
-    if (norm && clientByPhone[norm]) {
+  Object.entries(agencyByPhone).forEach(([norm, a]) => {
+    if (clientByPhone[norm]) {
       const c = clientByPhone[norm];
       matches.push({
-        name: a.name, phone: norm, email: a.email || c.email,
+        name: a.name || c.name, phone: norm, email: a.email || c.email,
         sourceAgency: a.sourceAgency, sourceClient: c.sourceClient,
         status: c.status, serviceLine: c.serviceLine, leadType: c.leadType,
         city: c.city, salesperson: c.salesperson,
